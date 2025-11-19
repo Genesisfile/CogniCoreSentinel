@@ -1,0 +1,6 @@
+{
+  "simulation_id": "sim-parallel-optimized-001",
+  "winner": "GitHub Actions + Cache + Matrix",
+  "metrics": { "reliability": 0.999, "time_to_artifact": "4.5m" },
+  "recommendation": "Use Matrix Strategy with Auto-Healing enabled."
+}

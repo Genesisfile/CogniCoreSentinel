@@ -1,0 +1,7 @@
+{
+  "version": "1.0",
+  "entries": [
+    { "keyword": "help", "response": "Available commands: /status, /scan, /optimize, /config" },
+    { "keyword": "boot", "response": "Boot sequence complete. Kernel loaded." }
+  ]
+}
