@@ -1,0 +1,73 @@
+name: CogniCore Autonomous Build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [build_apk]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [17]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Gradle Caching
+        uses: gradle/actions/setup-gradle@v3
+        
+      - name: Build with Auto-Repair
+        id: build_step
+        run: |
+          chmod +x ci/self_heal.sh
+          # Ensure wrapper exists
+          if [ ! -f gradlew ]; then gradle wrapper; fi
+          chmod +x gradlew
+          
+          # Attempt Build
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Engage Self-Healing Protocol
+        if: steps.build_step.outcome == 'failure'
+        run: |
+          echo "[!] Build failed. Engaging Self-Heal Protocol..."
+          ./ci/self_heal.sh build.log
+          
+          # Commit Fixes
+          git config --global user.name 'CogniCore Bot'
+          git config --global user.email 'bot@cognicore.dev'
+          git add .
+          git commit -m "Auto-Fix: Applied Self-Healing Patch" || echo "No changes to commit"
+          
+          # Retry Build
+          echo "[*] Retrying build..."
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Verify Artifact
+        run: |
+          chmod +x ci/verify_and_report.sh
+          ./ci/verify_and_report.sh
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CogniCore-Sentinel-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Report
+          path: build_report.json
